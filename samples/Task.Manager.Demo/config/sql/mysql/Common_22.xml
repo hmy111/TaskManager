@@ -1,0 +1,19 @@
+﻿<configuration namepsaces="" >
+  <mappings>
+    <map name="GetVehicles" description="测试接口描述" auth="wang">
+      <schema>
+        <option name="AppointedTime">指派承运商时间</option>
+        <option name="CustomerOrderNo">客户单号</option>
+        <option name="CustomerMdmCode">客户编码</option>
+        <option name="Plant">仓库</option>
+      </schema>
+      <sql>
+        <![CDATA[
+         select *
+          from   
+           `order`
+        ]]>
+      </sql>
+    </map>
+  </mappings>
+</configuration>
