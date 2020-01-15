@@ -1,59 +1,40 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using Autofac;
+using Autofac.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using System.Threading.Tasks;
 using Serilog;
-using Serilog.Events;
-using Serilog.Sinks.Elasticsearch;
+using System;
+using System.IO;
+using System.Threading.Tasks;
+using TaskTips.Extension;
 
 namespace TaskTips
 {
     public static class Startup
     {
-
-        public static  Task Run(Action<HostBuilderContext, IServiceCollection> func=null, Action<HostBuilderContext, IConfigurationBuilder> config=null)
+    
+        public static void Run(Action<HostBuilderContext, IServiceCollection> func = null, Action<HostBuilderContext, IConfigurationBuilder> config = null)
         {
-             
             InitApplication(() => DefaultBuild(func, config).Run());
-            return Task.CompletedTask;
         }
-     
         public static void InitApplication(Action action)
         {
             var configuration = new ConfigurationBuilder()
                .SetBasePath(Directory.GetCurrentDirectory())
                .AddJsonFile($"appsettings.json", true, true)
                .Build();
-           
-            var ApplicationName = configuration["JobConfig:ServiceName"];
-            Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Debug()
-                .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
-                .Enrich.WithProperty("Application", ApplicationName)
-                .Enrich.FromLogContext()
-                .WriteTo.File("Logs/log-.txt", rollingInterval: RollingInterval.Day)
-                .WriteTo.Elasticsearch(
-                    new ElasticsearchSinkOptions(new Uri(configuration["ElasticSearch:Url"]))
-                    {
-                        AutoRegisterTemplate = true,
-                        AutoRegisterTemplateVersion = AutoRegisterTemplateVersion.ESv6,
-                        IndexFormat = "etms-service" + (configuration["ASPNETCORE_ENVIRONMENT"] == null ? "development" : configuration["ASPNETCORE_ENVIRONMENT"].ToLower()) + "-log-{0:yyyy.MM.dd}"
-                    })
-                .CreateLogger();
 
+            AppLogExtensions.InitLog(configuration);
             try
             {
-                Log.Information($"Starting {ApplicationName}");
+                Log.Information($"Starting App");
                 action.Invoke();
             }
             catch (Exception ex)
             {
-                Log.Fatal(ex, $"{ApplicationName} terminated unexpectedly!");
-
+                Log.Fatal(ex, $"App terminated unexpectedly!");
             }
             finally
             {
@@ -64,14 +45,15 @@ namespace TaskTips
         public static IHost DefaultBuild(Action<HostBuilderContext, IServiceCollection> func = null, Action<HostBuilderContext, IConfigurationBuilder> config = null)
         {
             var host = new HostBuilder()
+          .UseServiceProviderFactory(new AutofacServiceProviderFactory())
           .ConfigureHostConfiguration(configHost =>
           {
               configHost.SetBasePath(Directory.GetCurrentDirectory());
           })
           .ConfigureAppConfiguration((hostContext, configApp) =>
           {
-              configApp.AddJsonFile("appsettings.json", true,true);
-              configApp.AddJsonFile($"appsettings.{hostContext.HostingEnvironment.EnvironmentName}.json", true,true);
+              configApp.AddJsonFile("appsettings.json", true, true);
+              configApp.AddJsonFile($"appsettings.{hostContext.HostingEnvironment.EnvironmentName}.json", true, true);
               configApp.AddXmlFileForSql();
               if (config != null)
               {
@@ -80,7 +62,7 @@ namespace TaskTips
           })
           .ConfigureServices((hostContext, services) =>
           {
-            
+
               services.AddJob(hostContext.Configuration);//Job服务注入及Job配置
               services.AddHttpClientService(hostContext.Configuration);//httpclient注入
               services.AddSqlMap(hostContext.Configuration);
@@ -95,6 +77,10 @@ namespace TaskTips
               }
 
           })
+          .ConfigureContainer<ContainerBuilder>(_builder =>
+          {
+              _builder.RegisterModule<ApplicationModule>();
+          })
           .ConfigureLogging((hostContext, configLogging) =>
           {
               configLogging.AddConsole();
@@ -103,7 +89,7 @@ namespace TaskTips
                   configLogging.AddDebug();
               }
           })
-        
+
           .UseConsoleLifetime();
             return host.Build();
         }

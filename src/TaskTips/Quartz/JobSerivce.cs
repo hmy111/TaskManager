@@ -1,28 +1,23 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Quartz;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text;
 using System.Threading.Tasks;
-using TaskTips.Common;
 
 namespace TaskTips
 {
-    public abstract class JobSerivce: IJob
+    public abstract class JobSerivce : IJob
     {
         public readonly IConfiguration _configuration;
         public readonly SqlMappings _mappings;//获取mappings 数据库脚本配置
-        protected readonly ILogger _logger;
+        protected ILogger _logger;
         private static readonly object obj = new object();
-         
-        protected JobSerivce(IConfiguration configuration)
+
+        protected JobSerivce(IConfiguration configuration, ILogger<JobSerivce> logger)
         {
             _configuration = configuration;
-            _logger = NullLogger.Instance; 
-           
+            _logger = logger;
         }
 
         #region 废弃方法
@@ -32,7 +27,7 @@ namespace TaskTips
         /// </summary>
         /// <param name="xmlname"></param>
         [Obsolete]
-        public virtual string  GetSqlByID(string Id)
+        public virtual string GetSqlByID(string Id)
         {
             return AnalysisXml(Id);
         }
@@ -58,7 +53,7 @@ namespace TaskTips
         #endregion
         public Task Execute(IJobExecutionContext context)
         {
-           
+
             lock (obj)
             {
                 try
@@ -79,7 +74,7 @@ namespace TaskTips
             }
             return Task.CompletedTask;
         }
-         
+
         /// <summary>
         /// 执行方法
         /// </summary>
@@ -87,6 +82,6 @@ namespace TaskTips
         /// <returns></returns>
         public abstract Task ExecuteJob(IJobExecutionContext context);
     }
-    
-   
+
+
 }

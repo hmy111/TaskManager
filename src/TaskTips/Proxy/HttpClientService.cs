@@ -4,10 +4,11 @@ using System;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using TaskTips.Proxy;
 
 namespace TaskTips
 {
-    public class HttpClientService
+    public class HttpClientService: IHttpClientService
     {
         public HttpClient httpClient;
         private readonly ILogger _logger;
@@ -72,6 +73,30 @@ namespace TaskTips
                 throw new Exception(msg);
             }
         }
+
+        private static async Task<T> ResponseToEntityAsync<T>(HttpResponseMessage response)
+        {
+            response.EnsureSuccessStatusCode();
+            T result = default(T);
+            switch (typeof(T).Name)
+            {
+                case "Stream":
+                    result = (T)Convert.ChangeType(await response.Content.ReadAsByteArrayAsync(), typeof(T));
+                    break;
+                case "String":
+                    result = (T)Convert.ChangeType(await response.Content.ReadAsStringAsync(), typeof(T));
+                    break;
+                case "Byte[]":
+                    result = (T)Convert.ChangeType(await response.Content.ReadAsByteArrayAsync(), typeof(T));
+                    break;
+                default:
+                    var content = await response.Content.ReadAsStringAsync();
+                    result = JsonConvert.DeserializeObject<T>(content);
+                    break;
+            }
+            return result;
+        }
+
         private HttpRequestMessage FactoryHttpRequestMethod(string url, HttpMethod method, string json, string AuthToken)
         {
             var request = new HttpRequestMessage(method, url);
@@ -86,23 +111,8 @@ namespace TaskTips
             return request;
         }
 
-        private async Task<T> ResponseToEntityAsync<T>(HttpResponseMessage response)
-        {
-            response.EnsureSuccessStatusCode();
-            var result = await response.Content.ReadAsStringAsync();
-            Type t = typeof(T);
-            if (t.Name.Equals("String"))
-            {
-                return GetStringT<T>(result);
-            }
-            var resultObject = JsonConvert.DeserializeObject<T>(result);
-            return resultObject;
-        }
 
-        private T GetStringT<T>(string defaultVaule)
-        {
-            T ret = (T)Convert.ChangeType(defaultVaule, typeof(T));
-            return ret;
-        }
+
+
     }
 }
