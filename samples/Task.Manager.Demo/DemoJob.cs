@@ -13,7 +13,7 @@ namespace Task.Manager.Demo
         public readonly HttpClientService _httpClientService;//http请求
         public readonly AppSettingConfig _parameter;//任务参数
         public readonly SqlConfig _sqlConfig;//获取sql
-        public DemoJob(IConfiguration configuration, SqlConfig sqlConfig, HttpClientService httpClientService) : base(configuration)
+        public DemoJob(IConfiguration configuration, SqlConfig sqlConfig, HttpClientService httpClientService,ILogger<DemoJob> logger) : base(configuration, logger)
         {
             _sqlConfig = sqlConfig;
             _httpClientService = httpClientService;

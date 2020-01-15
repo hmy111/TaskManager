@@ -11,8 +11,7 @@ namespace Task.Manager.Demo
             {  
 
             }
-            ).GetAwaiter().GetResult();
-
+            );
         }
     }
 }
