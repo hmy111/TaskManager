@@ -70,6 +70,7 @@ namespace TaskTips
             catch (System.Exception ex)
             {
                 string msg = $"请求接口：{url},Meth:Post,Content:{JsonConvert.SerializeObject(json)};具体描述：{ex}";
+                _logger.LogError(msg);
                 throw new Exception(msg);
             }
         }
